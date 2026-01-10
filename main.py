@@ -109,7 +109,10 @@ def make_reservation():
         print("Formato de data ou duração inválido.")
         return
         
-    booking = agent.make_booking(chosen_room, start_dt, end_dt, c)
+    type_input = input("Tipo de Atividade (Lecture/Exam): ")
+    if type_input not in ["Lecture", "Exam"]: type_input = "Lecture" # Default
+
+    booking = agent.make_booking(chosen_room, start_dt, end_dt, c, activity_type=type_input)
     if booking:
         print(f"Reserva efetuada com sucesso para sala '{chosen_room.name}'.")
     else:

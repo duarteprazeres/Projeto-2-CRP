@@ -1,4 +1,4 @@
-z< import unified_planning
+import unified_planning
 from unified_planning.shortcuts import UserType, Fluent, InstantaneousAction, BoolType, Problem, Object, Or
 
 # Define UserTypes
@@ -10,12 +10,14 @@ Day = UserType('Day')
 exam_at = Fluent('exam_at', BoolType(), exam=Exam, room=Room, day=Day)
 room_free = Fluent('room_free', BoolType(), room=Room, day=Day)
 is_allocated = Fluent('is_allocated', BoolType(), exam=Exam)
+fits_in = Fluent('fits_in', BoolType(), exam=Exam, room=Room)
 
 # Define Action
 assign_exam = InstantaneousAction('assign_exam', exam=Exam, room=Room, day=Day)
 assign_exam.add_precondition(room_free(assign_exam.room, assign_exam.day))
 assign_exam.add_effect(exam_at(assign_exam.exam, assign_exam.room, assign_exam.day), True)
 assign_exam.add_effect(room_free(assign_exam.room, assign_exam.day), False)
+assign_exam.add_precondition(fits_in(assign_exam.exam, assign_exam.room))
 assign_exam.add_effect(is_allocated(assign_exam.exam), True)
 
 # Define Problem
@@ -23,6 +25,7 @@ problem = Problem('exam_scheduling')
 problem.add_fluent(exam_at, default_initial_value=False)
 problem.add_fluent(room_free, default_initial_value=False)
 problem.add_fluent(is_allocated, default_initial_value=False)
+problem.add_fluent(fits_in, default_initial_value=False)
 problem.add_action(assign_exam)
 
 # Objects
@@ -35,6 +38,13 @@ d1 = Object('d1', Day)
 d2 = Object('d2', Day)
 
 problem.add_objects([e1, e2, e3, r1, r2, d1, d2])
+
+# Exemplo: Vamos assumir que e1 e e2 são grandes e só cabem na r1.
+# e3 é pequeno e cabe em ambas.
+problem.set_initial_value(fits_in(e1, r1), True)
+problem.set_initial_value(fits_in(e2, r1), True)
+problem.set_initial_value(fits_in(e3, r1), True)
+problem.set_initial_value(fits_in(e3, r2), True)
 
 # Initial State
 for r in [r1, r2]:

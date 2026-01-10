@@ -60,6 +60,15 @@ with onto:
     class MultimediaRoom(Room):
         equivalent_to = [Room & has_equipment.some(Projector)]
 
+    class SmallRoom(Room):
+        equivalent_to = [Room & Not(LargeVenue)]
+
+    class BusyRoom(Room):
+        equivalent_to = [Room & has_booking.min(1, RoomBooking)]
+
+    class EquippedRoom(Room):
+        equivalent_to = [Room & has_equipment.some(Equipment)]
+
     class OverBookedRoom(Room):
         pass
 
