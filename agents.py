@@ -89,3 +89,4 @@ class ResourceOptimizer:
         if not found_waste:
             print("Nenhum desperdício significativo encontrado.")
         print("--- Fim da Auditoria ---")
+;
