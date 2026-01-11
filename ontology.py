@@ -1,6 +1,6 @@
 from owlready2 import *
 
-# Cria uma nova ontologia com o IRI especificado
+# Cria uma nova ontologia
 onto = get_ontology("http://dei.uc.pt/management.owl")
 
 with onto:
@@ -91,12 +91,12 @@ with onto:
         domain = [Course]
         range = [Activity]
     
-    # NOVA PROPRIEDADE: O Curso (ex: LEI, MEI) a que a disciplina pertence
+    #O curso a que a disciplina pertence
     class part_of_degree(DataProperty):
         domain = [Course]
         range = [str]
 
-    # NOVA PROPRIEDADE: Quem fez a reserva
+    # Quem fez a reserva
     class booked_by(ObjectProperty):
         domain = [RoomBooking]
         range = [Person]
@@ -105,8 +105,8 @@ with onto:
         domain = [RoomBooking]
         range = [Activity]
 
-    # --- 5 CLASSES INFERIDAS (Requisito 2) ---
-    # Estas classes classificam-se sozinhas quando corres o reasoner!
+    # 5 classes inferidas (requisito 2)
+    # Estas classes classificam-se sozinhas quando corremos o reasoner
 
     # 1. LargeRoom: Qualquer sala com capacidade >= 100
     class LargeRoom(Room):

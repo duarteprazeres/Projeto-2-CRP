@@ -2,8 +2,9 @@ import sys
 import subprocess
 import datetime
 from ontology import onto, Room, Course, Projector, sync_reasoner
-from agents import BookingAgent, ResourceOptimizer
+from agents import BookingAgent, PedagogicalControlAgent
 from owlready2 import sync_reasoner_pellet, sync_reasoner
+from generate_problem import gerar_ficheiro_problema as generate_pddl_problem
 
 def add_room():
     print("\n--- Adicionar Sala ---")
@@ -48,7 +49,7 @@ def make_reservation():
     
     # 1. Pedir Informações Detalhadas
     booker_name = input("Nome da Pessoa (Quem reserva): ")
-    degree_name = input("Nome do Curso (ex: LEI, MEI, LCD): ")
+    degree_name = input("Nome do Curso (ex: LEI, MEI, LCD): ").strip().upper()
     subject_name = input("Nome da Disciplina (ex: CRP, IA, SD): ")
     
     if not booker_name or not subject_name: return
@@ -61,12 +62,24 @@ def make_reservation():
         return
 
     print("\nTipo de Atividade:")
-    print("1. Lecture (Aula)")
-    print("2. Exam (Exame)")
-    print("3. Study (Estudo)")
-    type_map = {'1': 'Lecture', '2': 'Exam', '3': 'Study'}
+    print("1. Aula)")
+    print("2. Exame)")
+    print("3. Estudar)")
+    type_map = {'1': 'Aula', '2': 'Exame', '3': 'Estudar'}
     type_choice = input("Escolha (1-3): ")
-    activity_type = type_map.get(type_choice, 'Lecture')
+    
+    
+    # Mapeamento estrito para os nomes das classes da Ontologia. tem de ser em ingles 
+    if type_choice == '1':
+        activity_type = "Lecture"
+    elif type_choice == '2':
+        activity_type = "Exam"  # Tem de ser Exam, não "Exame"
+    elif type_choice == '3':
+        activity_type = "Study"
+    else:
+        print("Opção inválida. A assumir Lecture.")
+        activity_type = "Lecture"
+    
 
     # Criar a Disciplina e associar ao Curso (Grau)
     with onto:
@@ -118,6 +131,18 @@ def make_reservation():
         print("Formato inválido.")
         return
 
+    
+    pedagogical_agent = PedagogicalControlAgent(onto)
+    valid, msg = pedagogical_agent.validate_new_booking(
+        chosen_room, start_dt, end_dt, c, activity_type
+    )
+    
+    if not valid:
+        print(f"\n🚫 RESERVA RECUSADA pelo PedagogicalControlAgent:")
+        print(f"   Motivo: {msg}")
+        return
+    
+
     # Chamar o agente com o novo parâmetro booker_name
     booking = agent.make_booking(
         chosen_room, start_dt, end_dt, c, 
@@ -134,18 +159,27 @@ def make_reservation():
         print("❌ Falha: Conflito de prioridade.")
 
 def run_optimizer():
-    print("\n--- Correr Otimizador ---")
-    opt = ResourceOptimizer(onto)
-    opt.audit_rooms()
+    # Substitui a função antiga por esta
+    print("\n--- Auditoria Pedagógica  ---")
+    agent = PedagogicalControlAgent(onto)  # <-- Instância com novo nome
+    agent.audit_schedule()
 
 def run_pddl():
-    print("\n--- Correr Planeamento PDDL ---")
-    print("Executando 'planning_task.py'...")
+    print("\n--- 1. A Gerar Definição do Problema (problem.pddl) ---")
     try:
-        # Executa o script existente num sub-processo
+        # Gera o ficheiro problem.pddl fresco com os novos nomes (LargeExam, etc.)
+        generate_pddl_problem() 
+    except Exception as e:
+        print(f"Erro ao gerar problema: {e}")
+        return
+
+    print("\n--- 2. A Executar Planeador (planning_task.py) ---")
+    try:
+        # Executa o script de planeamento
         subprocess.run([sys.executable, "planning_task.py"], check=True)
     except Exception as e:
         print(f"Erro ao executar script PDDL: {e}")
+        print("Dica: Verifica se 'domain.pddl' e 'problem.pddl' estão na mesma pasta que o script.")
 
 def list_reservations():
     print("\n--- Estado Atual das Salas ---")
@@ -212,7 +246,7 @@ def main():
         print("=============================")
         print("1. Adicionar Sala")
         print("2. Fazer uma reserva")
-        print("3. Correr o Otimizador")
+        print("3. Correr uma Auditoria Pedagógica")
         print("4. Correr o Planeamento PDDL")
         print("5. Carregar Dados de Demo (Se tiveres adicionado)")
         print("6. Consultar Reservas das Salas")
@@ -230,10 +264,9 @@ def main():
         elif op == '4':
             run_pddl()
         elif op == '5':
-            # populate_demo_data() # Se tiveres esta função
             pass 
         elif op == '6':
-            list_reservations() # <--- CHAMADA NOVA
+            list_reservations() 
         elif op == '7':
             check_inferences()
         elif op == '0':
@@ -241,7 +274,6 @@ def main():
             break
         else:
             print("Opção inválida, tente novamente.")
-
 
 
 if __name__ == "__main__":

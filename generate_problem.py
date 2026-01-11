@@ -1,94 +1,84 @@
-import random
+import math
 
-def generate_pddl_problem(filename="problem.pddl"):
-    # --- CONFIGURAÇÃO DO CENÁRIO ---
-    # 1. Definição do Tempo (1 semana = 5 dias x 2 slots)
-    days = ["mon", "tue", "wed", "thu", "fri"]
-    slots = ["am", "pm"]
+def gerar_ficheiro_problema():
+    print("--- A gerar PDDL Otimizado para Pyperplan (Regras Estritas) ---")
     
-    # 2. Definição das Salas (Total: 6 salas)
-    # Tuplas: (Nome, Tipo)
-    rooms = [
-        ("auditorium-a", "large-room"), 
-        ("auditorium-b", "large-room"),
-        ("room-101", "small-room"),
-        ("room-102", "small-room"),
-        ("room-103", "small-room"),
-        ("lab-c", "small-room")
-    ]
+    cursos = ["LEI", "LIACD", "LDM"]
+    anos = [1, 2, 3]
+    disciplinas = ["ExameA", "ExameB", "ExameC", "ExameD", "ExameE"]
     
-    # 3. Definição dos Exames (Total: 15 exames)
-    # Vamos gerar nomes genéricos como exam-1, exam-2...
-    large_exams = [f"exam-l-{i}" for i in range(1, 6)]   # 5 Exames Grandes
-    small_exams = [f"exam-s-{i}" for i in range(1, 11)]  # 10 Exames Pequenos
+    # Definição das salas e seus tipos
+    salas_tipo = {
+        "Auditorio1": "grande", "Auditorio2": "grande", "Auditorio3": "grande",
+        "Sala_B1": "media", "Sala_B2": "media", "Sala_B3": "media",
+        "Sala_C1": "pequena", "Sala_C2": "pequena", "Sala_C3": "pequena"
+    }
     
-    all_exams = large_exams + small_exams
+    # 10 Slots
+    slots = ["seg_m", "seg_t", "ter_m", "ter_t", 
+             "qua_m", "qua_t", "qui_m", "qui_t", "sex_m", "sex_t"]
+    
+    # Para otimizar o nosso planeamento tivemos de obrigar cada curso a ficar no seu tipo de sala. 
+    # (O objetivo inicial era um curso poder ficar numa sala com capacidade igual ou superior mas o Pyperplan não lida bem com muitas opções)
+    # O Pyperplan deixa de perder tempo a tentar pôr LDM (curso com menos alunos) num Auditório (sala com mais alunos).
+    def verifica_cabe(curso, tipo_sala):
+        if curso == "LEI": 
+            return tipo_sala == "grande"    # LEI (200) só cabe em Grandes
+        elif curso == "LIACD": 
+            return tipo_sala == "media"     # LIACD forçamos a ir para Médias
+        else: # LDM
+            return tipo_sala == "pequena"   # LDM forçamos a ir para Pequenas
 
-    # --- ESCRITA DO FICHEIRO ---
-    with open(filename, "w") as f:
-        f.write("(define (problem semester-exams)\n")
-        f.write("  (:domain exam-scheduling)\n")
+    with open("problem.pddl", "w") as f:
+        f.write("(define (problem agendamento-otimizado)\n")
+        f.write("    (:domain agendamento-universitario-simples)\n")
+        f.write("    (:objects\n")
+        f.write("        lei liacd ldm - curso\n")
+        f.write("        ano1 ano2 ano3 - ano\n")
+        f.write(f"        {' '.join(slots)} - slot\n")
+        f.write(f"        {' '.join(salas_tipo.keys())} - sala\n")
         
-        # 1. OBJECTS
-        f.write("  (:objects\n")
-        # Escrever Exames
-        f.write(f"    {' '.join(large_exams)} - large-exam\n")
-        f.write(f"    {' '.join(small_exams)} - small-exam\n")
-        # Escrever Salas
-        l_rooms = [r[0] for r in rooms if r[1] == "large-room"]
-        s_rooms = [r[0] for r in rooms if r[1] == "small-room"]
-        f.write(f"    {' '.join(l_rooms)} - large-room\n")
-        f.write(f"    {' '.join(s_rooms)} - small-room\n")
-        # Escrever Tempo
-        f.write(f"    {' '.join(days)} - day\n")
-        f.write(f"    {' '.join(slots)} - slot\n")
-        f.write("  )\n\n")
-
-        # 2. INIT
-        f.write("  (:init\n")
-        
-        # Estado Inicial: Exames por alocar
-        for exam in all_exams:
-            f.write(f"    (unallocated {exam})\n")
-        
-        f.write("\n")
-
-        # Estado Inicial: Salas livres (Todas as salas x Todos os dias x Todos os slots)
-        for r_name, _ in rooms:
-            for d in days:
-                for s in slots:
-                    f.write(f"    (room-free {r_name} {d} {s})\n")
-
-        f.write("\n")
-
-        # Capacidades (Quem cabe onde)
-        # Regra: Salas Grandes levam TUDO. Salas Pequenas só levam exames pequenos.
-        
-        # Lógica para Salas Grandes (Aceitam Large e Small exams)
-        for r_name in l_rooms:
-            for exam in all_exams:
-                f.write(f"    (fits-in {exam} {r_name})\n")
-        
-        # Lógica para Salas Pequenas (Aceitam APENAS Small exams)
-        for r_name in s_rooms:
-            for exam in small_exams:
-                f.write(f"    (fits-in {exam} {r_name})\n")
-                
-        f.write("  )\n\n")
-
-        # 3. GOAL
-        f.write("  (:goal\n")
-        f.write("    (and\n")
-        for exam in all_exams:
-            f.write(f"      (allocated {exam})\n")
+        lista_exames = []
+        for c in cursos:
+            for a in anos:
+                for disc in disciplinas:
+                    lista_exames.append(f"{c}_{a}_{disc}")
+        f.write(f"        {' '.join(lista_exames)} - exame\n")
         f.write("    )\n")
-        f.write("  )\n")
+
+        
+        f.write("    (:init\n")
+        
+        for exame in lista_exames:
+            parts = exame.split('_')
+            curso_atual = parts[0]
+            ano_num = parts[1]
+            
+            f.write(f"        (do_curso {exame} {curso_atual.lower()}) (do_ano {exame} ano{ano_num})\n")
+            f.write(f"        (exame_pendente {exame})\n") # Token positivo
+            
+            # Escreve apenas as salas onde o exame cabe estritamente
+            for sala, tipo in salas_tipo.items():
+                if verifica_cabe(curso_atual, tipo):
+                    f.write(f"        (cabe_na_sala {exame} {sala})\n")
+
+        # Salas livres
+        for s in salas_tipo.keys():
+            for t in slots:
+                f.write(f"        (sala_livre {s} {t})\n")
+
+        # Sem conflitos
+        for c in cursos:
+            for a in anos:
+                for t in slots:
+                    f.write(f"        (curso_ano_sem_conflito {c.lower()} ano{a} {t})\n")
+        f.write("    )\n")
+
+        
+        f.write("    (:goal (and\n")
+        for exame in lista_exames:
+            f.write(f"        (agendado {exame})\n")
+        f.write("    ))\n")
         f.write(")\n")
-
-    print(f"✅ Ficheiro '{filename}' gerado com sucesso!")
-    print(f"   - {len(all_exams)} Exames")
-    print(f"   - {len(rooms)} Salas")
-    print(f"   - {len(days) * len(slots) * len(rooms)} Slots totais disponíveis")
-
-if __name__ == "__main__":
-    generate_pddl_problem()
+        
+    print("✅ PDDL Otimizado Gerado (Regras estritas para performance rápida).")
