@@ -26,9 +26,6 @@ with onto:
         domain = [Room]
         range = [int]
 
-    class LargeVenue(Room):
-        equivalent_to = [Room & (has_capacity >= 80)]
-
     class start_time(DataProperty):
         domain = [RoomBooking]
         range = [datetime.datetime]
@@ -62,26 +59,9 @@ with onto:
         domain = [Room]
         range = [Equipment]
 
-    class MultimediaRoom(Room):
-        equivalent_to = [Room & has_equipment.some(Projector)]
-
-    class SmallRoom(Room):
-        equivalent_to = [Room & Not(LargeVenue)]
-
-    class BusyRoom(Room):
-        equivalent_to = [Room & has_booking.min(1, RoomBooking)]
-
     class EquippedRoom(Room):
         equivalent_to = [Room & has_equipment.some(Equipment)]
 
-    class OverBookedRoom(Room):
-        pass
-
-    # Regra SWRL para definir OverBookedRoom: enrolled_students > has_capacity
-    # NOTA: O reasoner HermiT incluído no Owlready2 pode não suportar 'greaterThan'.
-    # Se falhar, teremos de validar isto em Python.
-    # rule = Imp()
-    # rule.set_as_rule("Room(?r), has_capacity(?r, ?cap), has_booking(?r, ?b), booking_for(?b, ?c), enrolled_students(?c, ?stud), greaterThan(?stud, ?cap) -> OverBookedRoom(?r)")
 
     class is_taught_by(ObjectProperty):
         domain = [Course]
@@ -111,6 +91,9 @@ with onto:
     # 1. LargeRoom: Qualquer sala com capacidade >= 100
     class LargeRoom(Room):
         equivalent_to = [Room & (has_capacity >= 100)]
+    
+    class SmallRoom(Room):
+        equivalent_to = [Room & Not(LargeRoom)]
 
     # 2. MultimediaRoom: Qualquer sala que tenha pelo menos um Projetor
     class MultimediaRoom(Room):
@@ -119,20 +102,17 @@ with onto:
     # 3. BusyRoom: Uma sala que já tenha alguma reserva associada
     class BusyRoom(Room):
         equivalent_to = [Room & has_booking.some(RoomBooking)]
-
+    
     # 4. ExamBooking: Uma reserva cuja atividade seja um Exame
     class ExamBooking(RoomBooking):
         equivalent_to = [RoomBooking & has_activity_type.some(Exam)]
 
-    # 5. CS_Course (Curso de Informática): Cursos que pertençam ao departamento de informática (Exemplo)
-    # Para simplificar, vamos criar uma inferência baseada no nome ou propriedade
-    # Ou, em alternativa, uma "SmallClass" (Turma pequena)
-    class SmallClass(Course):
-        # Assumindo que criamos uma propriedade 'enrolled_students' no Course
-        equivalent_to = [Course] 
-        # Nota: Data properties em inferências complexas podem requerer o reasoner Pellet,
-        # mas para o básico isto serve de placeholder.
-        
+    # 5. CrowdedCourse (Curso Numeroso): Curso com mais de 100 alunos
+    # Útil para: Saber quais cursos PRECISAM de salas grandes.
+    class CrowdedCourse(Course):
+        # Nota: Precisas de garantir que a prop enrolled_students está definida no ontology.py
+        equivalent_to = [Course & (enrolled_students >= 100)]
+    
     # Vamos adicionar a propriedade para o Course para suportar a inferência
     class enrolled_students(DataProperty):
         domain = [Course]
@@ -147,8 +127,8 @@ with onto:
 
 sync_reasoner()
 
-if onto.LargeVenue in r1.is_a:
-    print("Sucesso: SalaGrande classificada como LargeVenue")
+if onto.LargeRoom in r1.is_a:
+    print("Sucesso: SalaGrande classificada como LargeRoom")
 else:
-    print("Falha: SalaGrande NÃO foi classificada como LargeVenue")
+    print("Falha: SalaGrande NÃO foi classificada como LargeRoom")
 

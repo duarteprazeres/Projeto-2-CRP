@@ -143,6 +143,8 @@ class BookingAgent:
             else:
                 print("      Por favor responda 's' para sim ou 'n' para não.")
 
+    
+
     # Nota: Adicionámos o argumento 'booker_name'
     def make_booking(self, room, start_time, end_time, course, activity_type="Lecture", booker_name="Anónimo"):
         priorities = {"Exam": 10, "Lecture": 5, "Study": 1}

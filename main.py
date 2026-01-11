@@ -248,7 +248,7 @@ def main():
         print("2. Fazer uma reserva")
         print("3. Correr uma Auditoria Pedagógica")
         print("4. Correr o Planeamento PDDL")
-        print("5. Carregar Dados de Demo (Se tiveres adicionado)")
+        print("5. Carregar Dados de Demo (Caso tenha sido adicionado)")
         print("6. Consultar Reservas das Salas")
         print("7. Verificar Inferências (Reasoner)")
         print("0. Sair")
