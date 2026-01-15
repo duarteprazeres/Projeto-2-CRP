@@ -24,7 +24,7 @@
     (:action alocar_exame
         :parameters (?e - exame ?s - sala ?t - slot ?c - curso ?a - ano)
         :precondition (and 
-            ;; AQUI ESTÁ O QUE FALTAVA: Verificamos se está pendente
+            ;; Verificamos se está pendente
             (exame_pendente ?e)
             
             (do_curso ?e ?c)

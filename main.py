@@ -25,7 +25,7 @@ def add_room():
         # Verifica se já existe
         existing = onto.search(iri=f"*{name}")
         if existing and any(isinstance(x, Room) for x in existing):
-             print(f"Aviso: Já existe algo com nome '{name}'. Criando mesmo assim...")
+             print(f"Aviso: Já existe algo com nome '{name}'. Alterando os dados da sala existente...")
 
         r = Room(name)
         r.has_capacity = [cap]
@@ -47,11 +47,43 @@ def add_room():
 def make_reservation():
     print("\n--- Fazer Reserva Detalhada ---")
     
-    # 1. Pedir Informações Detalhadas
+    print("\nTipo de Atividade:")
+    print("1. Aula)")
+    print("2. Exame)")
+    print("3. Estudar)")
+    type_map = {'1': 'Aula', '2': 'Exame', '3': 'Estudar'}
+    type_choice = input("Escolha (1-3): ")
+
+    # Mapeamento estrito para os nomes das classes da Ontologia. tem de ser em ingles 
+    if type_choice == '1':
+        activity_type = "Lecture"
+        user_role = "Teacher"
+    elif type_choice == '2':
+        activity_type = "Exam"  # Tem de ser Exam, não "Exame"
+        user_role = "Teacher"
+    elif type_choice == '3':
+        activity_type = "Study"
+        user_role = "Student"
+    else:
+        print("Opção inválida. A assumir Lecture.")
+        activity_type = "Lecture"
+        user_role = "Teacher"
+
+    # 2. Perguntar quem está a reservar e o cargo
     booker_name = input("Nome da Pessoa (Quem reserva): ")
-    degree_name = input("Nome do Curso (ex: LEI, MEI, LCD): ").strip().upper()
-    subject_name = input("Nome da Disciplina (ex: CRP, IA, SD): ")
-    
+    if not booker_name:
+        print("Nome inválido.")
+        return
+
+    # 3. Lógica Dinâmica: Só pede Curso/Disciplina se NÃO for Estudar
+    if activity_type == "Study":
+        # Preenchemos com valores padrão para não "quebrar" a ontologia que espera um Course
+        degree_name = "Geral"
+        subject_name = "Estudo Autónomo"
+    else:
+        degree_name = input("Nome do Curso (ex: LEI, MEI): ").strip().upper()
+        subject_name = input("Nome da Disciplina (ex: IA, SD): ")
+
     if not booker_name or not subject_name: return
         
     try:
@@ -61,26 +93,7 @@ def make_reservation():
         print("Número inválido.")
         return
 
-    print("\nTipo de Atividade:")
-    print("1. Aula)")
-    print("2. Exame)")
-    print("3. Estudar)")
-    type_map = {'1': 'Aula', '2': 'Exame', '3': 'Estudar'}
-    type_choice = input("Escolha (1-3): ")
     
-    
-    # Mapeamento estrito para os nomes das classes da Ontologia. tem de ser em ingles 
-    if type_choice == '1':
-        activity_type = "Lecture"
-    elif type_choice == '2':
-        activity_type = "Exam"  # Tem de ser Exam, não "Exame"
-    elif type_choice == '3':
-        activity_type = "Study"
-    else:
-        print("Opção inválida. A assumir Lecture.")
-        activity_type = "Lecture"
-    
-
     # Criar a Disciplina e associar ao Curso (Grau)
     with onto:
         # Usamos o nome da disciplina como identificador do objeto Course
@@ -147,7 +160,8 @@ def make_reservation():
     booking = agent.make_booking(
         chosen_room, start_dt, end_dt, c, 
         activity_type=activity_type, 
-        booker_name=booker_name
+        booker_name=booker_name,
+        user_role=user_role
     )
     
     if booking:
@@ -226,15 +240,35 @@ def check_inferences():
         
     print("Inferências concluídas!")
     
-    # Exemplo: Listar todas as salas que o sistema descobriu serem "LargeRoom"
-    print("\n Salas Grandes (Detetadas automaticamente):")
+    # Listar todas as salas que o sistema descobriu serem "LargeRoom"
+    print("\n Salas Grandes (LargeRoom):")
     for r in onto.LargeRoom.instances():
         print(f" -> {r.name} (Capacidade: {r.has_capacity})")
 
-    # Exemplo: Listar salas ocupadas
+    # 2. Listar salas com projetor 
+    print("\n Salas com projetor (MultimediaRoom):")
+    for r in onto.MultimediaRoom.instances():
+        print(f"   -> {r.name} (Equipamento: {r.has_equipment})")
+
+    # Listar salas ocupadas
     print("\n Salas Ocupadas (BusyRoom):")
     for r in onto.BusyRoom.instances():
         print(f" -> {r.name}")
+
+    # Listar exames agendados
+    print("\n Reservas de Exame (ExamBooking):")
+    for b in onto.ExamBooking.instances():
+        # Tenta obter a sala e a hora para mostrar detalhes
+        room_name = b.is_booked_in[0].name if b.is_booked_in else "S/Sala"
+        time_str = b.start_time[0].strftime('%H:%M') if b.start_time else "?"
+        print(f"   -> Reserva em {room_name} às {time_str}")
+    
+    # 5. Listar cursos numerosos
+    print("\n Cursos Numerosos, >100 alunos (CrowdedCourse):")
+    for c in onto.CrowdedCourse.instances():
+        n = c.enrolled_students[0] if c.enrolled_students else "?"
+        print(f"   -> {c.name} (Alunos: {n})")
+
 
 def main():
     while True:

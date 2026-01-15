@@ -17,6 +17,7 @@ with onto:
     class Activity(Thing): pass
     class Lecture(Activity): pass
     class Exam(Activity): pass
+    class Study(Activity): pass
     
     class Course(Thing): pass
     class Equipment(Thing): pass

@@ -146,7 +146,7 @@ class BookingAgent:
     
 
     # Nota: Adicionámos o argumento 'booker_name'
-    def make_booking(self, room, start_time, end_time, course, activity_type="Lecture", booker_name="Anónimo"):
+    def make_booking(self, room, start_time, end_time, course, activity_type="Lecture", booker_name="Anónimo", user_role="Student"):
         priorities = {"Exam": 10, "Lecture": 5, "Study": 1}
         current_prio = priorities.get(activity_type, 1)
         
@@ -162,7 +162,15 @@ class BookingAgent:
                 if b_start and b_end:
                     if start_time < b_end and end_time > b_start:
                         # conflito detetado
-                        existing_prio = 5 
+                        existing_prio = 1 # Valor base
+                        if existing_booking.has_activity_type:
+                            act = existing_booking.has_activity_type[0]
+                            if isinstance(act, self.ontology.Exam):
+                                existing_prio = 10
+                            elif isinstance(act, self.ontology.Lecture):
+                                existing_prio = 5
+                            elif isinstance(act, self.ontology.Study):
+                                existing_prio = 1 
                         
                         if current_prio > existing_prio:
                             print(f"⚠️ CONFLITO RESOLVIDO: Prioridade superior. A substituir reserva...")
@@ -180,7 +188,14 @@ class BookingAgent:
         
         # criar/recuperar pessoa
         # O replace garante que não há espaços no ID da pessoa (ex: "Duarte Prazeres" - "Duarte_Prazeres")
-        person = self.ontology.Person(booker_name.replace(" ", "_"))
+        safe_name = booker_name.replace(" ", "_")
+        
+        if user_role == "Teacher":
+            person = self.ontology.Teacher(safe_name)
+        elif user_role == "Student":
+            person = self.ontology.Student(safe_name)
+        else:
+            person = self.ontology.Person(safe_name)
         new_booking.booked_by = [person]
 
         # Criamos um ID único para esta atividade específica para não misturar objetos
@@ -189,14 +204,14 @@ class BookingAgent:
         unique_id = f"{activity_type}_{course.name}_{random.randint(1000,9999)}"
         
         if activity_type == "Exam":
-            # cria uma instância única da classe Exam
             act_instance = self.ontology.Exam(unique_id)
-            new_booking.has_activity_type = [act_instance]
+        elif activity_type == "Study":     # <--- Novo bloco para Study
+            act_instance = self.ontology.Study(unique_id)
         else:
-            # cria uma instância única da classe Lecture
+            # Default para Lecture
             act_instance = self.ontology.Lecture(unique_id)
-            new_booking.has_activity_type = [act_instance]
         
+        new_booking.has_activity_type = [act_instance]
         room.has_booking.append(new_booking)
         
         # 3. tentar realocar reserva expulsa, se houver
